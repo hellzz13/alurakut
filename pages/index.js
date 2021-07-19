@@ -27,24 +27,83 @@ function ProfileSideBar(props) {
   );
 }
 
+function ProfileRelationsBox(props) {
+  return (
+    <ProfileRelationsBoxWrapper>
+      <h2 className="smallTitle">
+        {props.title} ({props.items.length})
+      </h2>
+      <ul>
+        {/* {seguidores.map((itemAtual) => {
+          return (
+            <li key={itemAtual}>
+              <a
+                href={`https://github.com/${itemAtual}.png`}
+                key={itemAtual.title}
+              >
+                <img src={itemAtual.image} />
+                <span>{itemAtual.title}</span>
+              </a>
+            </li>
+          );
+        })} */}
+      </ul>
+    </ProfileRelationsBoxWrapper>
+  );
+}
+
+// Aqui rendezira a app em sí
 export default function Home() {
   const githubUser = "hellzz13";
-  const [comunidades, setComunidades] = React.useState([
-    {
-      id: 123131232131,
-      title: "Eu odeio acordar cedo",
-      image: "https://alurakut.vercel.app/capa-comunidade-01.jpg",
-    },
-  ]);
+  const [comunidades, setComunidades] = React.useState([]);
   const pessoasFavoritas = [
-    "DaniSan0508-project",
+    // "DaniSan0508-project",
     "juunegreiros",
     "omariosouto",
     "peas",
     "rafaballerini",
     "marcobrunodev",
-    // "felipefialho",
+    "felipefialho",
   ];
+  // useState dos seguidores foi criado
+  const [seguidores, setSeguidores] = React.useState([]);
+  // useEffect coloca um limite de acesso pra API, para monitorar e não sobrecarregar no state
+  React.useEffect(function () {
+    // API do github
+    fetch("https://api.github.com/users/hellzz13/followers")
+      .then(function (resp) {
+        return resp.json();
+      })
+      .then(function (respComplete) {
+        setSeguidores(respComplete);
+      });
+
+    // API graphQL
+    fetch("https://graphql.datocms.com/", {
+      method: "POST",
+      headers: {
+        Authorization: "9fc6fcf516cbc7102a713198dcc434",
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        query: `query {
+          allComunnities{
+            title
+            imageUrl
+            id
+            creatorSlug
+          }
+        }`,
+      }),
+    })
+      .then((response) => response.json()) //com retorno direto arrow function
+      .then((respostaCompleta) => {
+        const comunidadesDato = respostaCompleta.data.allComunnities;
+        setComunidades(comunidadesDato);
+        console.log(comunidadesDato);
+      });
+  }, []);
 
   return (
     <>
@@ -70,13 +129,24 @@ export default function Home() {
                 console.log("Campo: ", dadosDoForm.get("image"));
 
                 const comunidade = {
-                  id: new Date().toISOString,
                   title: dadosDoForm.get("title"),
-                  image: dadosDoForm.get("title"),
+                  imageUrl: dadosDoForm.get("image"),
+                  creatorSlug: githubUser,
                 };
 
-                const comunidadeAtualizadas = [...comunidades, comunidade];
-                setComunidades(comunidadeAtualizadas);
+                fetch("/api/comunidades", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify(comunidade),
+                }).then(async (response) => {
+                  const dados = await response.json();
+                  console.log(dados.registroCriado);
+                  const comunidade = dados.registroCriado;
+                  const comunidadesAtualizadas = [...comunidades, comunidade];
+                  setComunidades(comunidadesAtualizadas);
+                });
               }}
             >
               <div>
@@ -103,14 +173,19 @@ export default function Home() {
           className="profileRelationsArea"
           style={{ gridArea: "profileRelationsArea" }}
         >
+          <ProfileRelationsBox title="Seguidores " items={seguidores} />
           <ProfileRelationsBoxWrapper>
             <h2 className="smallTitle">Comunidades ({comunidades.length})</h2>
             <ul>
               {comunidades.map((itemAtual) => {
                 return (
+                  //verificar esse id
                   <li key={itemAtual.id}>
-                    <a href={`/users/${itemAtual.title}`} key={itemAtual.title}>
-                      <img src={itemAtual.image} />
+                    <a
+                      href={`/comunities/${itemAtual.id}`}
+                      key={itemAtual.title}
+                    >
+                      <img src={itemAtual.imageUrl} />
                       <span>{itemAtual.title}</span>
                     </a>
                   </li>
